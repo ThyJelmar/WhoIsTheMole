@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authApi } from '@/api/auth'
+import { markRefreshFailed, resetRefreshFailed } from '@/api/axios'
 
 export type UserRole = 'User' | 'Administrator'
 
@@ -10,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const email = ref<string | null>(null)
   const role = ref<UserRole | null>(null)
   const isAuthenticated = ref(false)
+  const isReady = ref(false)
 
   const isAdmin = computed(() => role.value === 'Administrator')
 
@@ -22,7 +24,10 @@ export const useAuthStore = defineStore('auth', () => {
       role.value = data.role
       isAuthenticated.value = true
     } catch {
-      clearSession()
+      // No valid session — expected on first visit or after expiry
+      isAuthenticated.value = false
+    } finally {
+      isReady.value = true
     }
   }
 
@@ -32,6 +37,8 @@ export const useAuthStore = defineStore('auth', () => {
     email.value = data.email
     role.value = data.role
     isAuthenticated.value = true
+    isReady.value = true
+    resetRefreshFailed()
   }
 
   function clearSession() {
@@ -47,6 +54,8 @@ export const useAuthStore = defineStore('auth', () => {
       await authApi.logout()
     } finally {
       clearSession()
+      isReady.value = false
+      markRefreshFailed()
     }
   }
 
@@ -57,6 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     role,
     isAuthenticated,
     isAdmin,
+    isReady,
     fetchMe,
     setSession,
     clearSession,

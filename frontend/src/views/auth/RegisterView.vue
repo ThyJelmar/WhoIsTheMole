@@ -143,8 +143,8 @@ async function handleSubmit() {
 
   try {
     await authApi.register({ name: form.name, email: form.email, password: form.password })
-    await authApi.login({ email: form.email, password: form.password })
-    await authStore.fetchMe()
+    const { data } = await authApi.login({ email: form.email, password: form.password })
+    authStore.setSession(data)
     router.push('/')
   } catch (error: unknown) {
     const status = (error as { response?: { status?: number } })?.response?.status

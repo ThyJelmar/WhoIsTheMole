@@ -1,12 +1,14 @@
-import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import { setActivePinia, createPinia } from 'pinia'
-import { createRouter, createMemoryHistory } from 'vue-router'
+import type { MoleScore } from '../src/api/scores'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
+import { createMemoryHistory, createRouter } from 'vue-router'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
+import { scoresApi } from '../src/api/scores'
+import { seasonsApi } from '../src/api/seasons'
 import DashboardView from '../src/views/user/DashboardView.vue'
-import type { MoleScore } from '../src/api/scores'
 
 // ── Mock the store APIs used by fetchDashboard ─────────────────────────────
 vi.mock('../src/api/seasons', () => ({
@@ -24,30 +26,29 @@ vi.mock('../src/api/scores', () => ({
   },
 }))
 
-import { seasonsApi } from '../src/api/seasons'
-import { scoresApi } from '../src/api/scores'
-
 const mockGetActive = seasonsApi.getActive as Mock
 const mockGetBySeason = scoresApi.getBySeason as Mock
 
 const SEASON = { id: 'season-1', name: 'Season 1', year: 2024, isActive: true }
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
-const makeScore = (overrides: Partial<MoleScore> = {}): MoleScore => ({
-  candidateId: 'cand-1',
-  candidateName: 'Alice',
-  photoUrl: null,
-  status: 'Active',
-  totalMoneyEarned: 100,
-  totalMoneyLost: 50,
-  totalKeyPositions: 2,
-  totalSuspiciousActs: 1,
-  totalTimesAccused: 3,
-  totalAccusedByEliminated: 0,
-  score: 80,
-  scorePerEpisode: [40, 80],
-  ...overrides,
-})
+function makeScore(overrides: Partial<MoleScore> = {}): MoleScore {
+  return {
+    candidateId: 'cand-1',
+    candidateName: 'Alice',
+    photoUrl: null,
+    status: 'Active',
+    totalMoneyEarned: 100,
+    totalMoneyLost: 50,
+    totalKeyPositions: 2,
+    totalSuspiciousActs: 1,
+    totalTimesAccused: 3,
+    totalAccusedByEliminated: 0,
+    score: 80,
+    scorePerEpisode: [40, 80],
+    ...overrides,
+  }
+}
 
 const SCORES: MoleScore[] = [
   makeScore({ candidateId: 'cand-1', candidateName: 'Alice', score: 120, status: 'Active' }),
@@ -130,7 +131,7 @@ describe('DashboardView', () => {
 
   it('renders cards sorted descending by score', async () => {
     // Provide data in unsorted order — store should sort desc
-    mockGetBySeason.mockResolvedValue({ data: [...SCORES].reverse() })
+    mockGetBySeason.mockResolvedValue({ data: [...SCORES].toReversed() })
 
     const { wrapper } = await mountDashboard()
     await flushPromises()

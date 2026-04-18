@@ -74,16 +74,12 @@ export function createAppRouter() {
     routes,
   })
 
-  let initialized = false
-
   router.beforeEach(async (to, _from, next) => {
     const authStore = useAuthStore()
 
-    if (!initialized) {
-      if (!authStore.isAuthenticated) {
-        await authStore.fetchMe()
-      }
-      initialized = true
+    // Await session restore on first navigation (or after logout resets isReady)
+    if (!authStore.isReady) {
+      await authStore.fetchMe()
     }
 
     if (to.meta.requiresAuth && !authStore.isAuthenticated) {

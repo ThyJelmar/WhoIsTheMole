@@ -104,8 +104,8 @@ async function handleSubmit() {
   loading.value = true
 
   try {
-    await authApi.login({ email: form.email, password: form.password })
-    await authStore.fetchMe()
+    const { data } = await authApi.login({ email: form.email, password: form.password })
+    authStore.setSession(data)
     const redirect = route.query.redirect as string | undefined
     router.push(redirect ?? '/')
   } catch (error: unknown) {

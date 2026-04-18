@@ -1,5 +1,16 @@
 import axios from 'axios'
 
+export const SKIP_REFRESH_ROUTES = [
+  '/api/auth/me',
+  '/api/auth/refresh',
+  '/api/auth/login',
+  '/api/auth/logout',
+]
+
+export function shouldSkipRefresh(url: string): boolean {
+  return SKIP_REFRESH_ROUTES.some((route) => url.includes(route))
+}
+
 const api = axios.create({
   baseURL: 'https://localhost:7296',
   withCredentials: true,
@@ -9,10 +20,19 @@ const api = axios.create({
 })
 
 let isRefreshing = false
+let refreshFailed = false
 let failedQueue: Array<{
   resolve: (value: unknown) => void
   reject: (reason?: unknown) => void
 }> = []
+
+export function markRefreshFailed(): void {
+  refreshFailed = true
+}
+
+export function resetRefreshFailed(): void {
+  refreshFailed = false
+}
 
 function processQueue(error: unknown) {
   for (const { resolve, reject } of failedQueue) {
@@ -25,6 +45,13 @@ function processQueue(error: unknown) {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const url = (error.config?.url ?? '') as string
+
+    // Never attempt refresh for auth routes or after a failed refresh
+    if (shouldSkipRefresh(url) || refreshFailed) {
+      throw error
+    }
+
     const originalRequest = error.config
 
     if (error.response?.status !== 401 || originalRequest._retry) {
@@ -45,10 +72,11 @@ api.interceptors.response.use(
     isRefreshing = true
 
     try {
-      await axios.post('http://localhost:5000/api/auth/refresh', {}, { withCredentials: true })
+      await axios.post('https://localhost:7296/api/auth/refresh', {}, { withCredentials: true })
       processQueue(null)
       return api(originalRequest)
     } catch (refreshError) {
+      refreshFailed = true
       processQueue(refreshError)
       window.location.href = '/login'
       throw refreshError
