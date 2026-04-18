@@ -28,7 +28,7 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status !== 401 || originalRequest._retry) {
-      throw error;
+      throw error
     }
 
     if (isRefreshing) {
@@ -36,7 +36,9 @@ api.interceptors.response.use(
         failedQueue.push({ resolve, reject })
       })
         .then(() => api(originalRequest))
-        .catch((error_) => { throw error_; })
+        .catch((error_) => {
+          throw error_
+        })
     }
 
     originalRequest._retry = true

@@ -17,6 +17,8 @@ export interface ScoreWeights {
 }
 
 export const seasonsApi = {
+  getActive: () => api.get<Season>('/api/seasons/active'),
+
   list: () => api.get<Season[]>('/api/seasons'),
 
   get: (id: string) => api.get<Season>(`/api/seasons/${id}`),

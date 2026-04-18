@@ -110,7 +110,8 @@ async function handleSubmit() {
     router.push(redirect ?? '/')
   } catch (error: unknown) {
     const status = (error as { response?: { status?: number } })?.response?.status
-    serverError.value = status === 401 ? 'Incorrect email or password' : 'Something went wrong, try again';
+    serverError.value =
+      status === 401 ? 'Incorrect email or password' : 'Something went wrong, try again'
   } finally {
     loading.value = false
   }

@@ -5,84 +5,135 @@
       <div>
         <h1 class="text-h5 font-weight-medium text-onBackground">Mole Scores</h1>
         <p class="text-body-2 mt-1" style="color: #c8c4be">
-          Your ranking — sorted by suspicion score
+          {{ moleStore.activeSeason?.name ?? 'Active season' }} — sorted by suspicion score
         </p>
       </div>
       <v-btn
-        v-if="!loading"
+        v-if="!moleStore.isLoading"
         icon="mdi-refresh"
         variant="text"
         color="onSurface"
         size="small"
-        :aria-label="'Refresh scores'"
-        @click="load"
+        aria-label="Refresh scores"
+        @click="moleStore.fetchDashboard()"
       />
     </div>
 
     <!-- Loading skeleton -->
-    <template v-if="loading">
-      <v-row dense>
-        <v-col v-for="n in 6" :key="n" cols="12" sm="6" md="4" lg="3">
-          <v-skeleton-loader type="image, list-item-two-line" color="surfaceVariant" />
+    <template v-if="moleStore.isLoading">
+      <v-row dense class="mb-6">
+        <v-col v-for="n in 3" :key="n" cols="12" sm="4">
+          <v-skeleton-loader type="list-item-two-line" color="surfaceVariant" />
         </v-col>
       </v-row>
+      <v-skeleton-loader
+        v-for="n in 5"
+        :key="n"
+        type="list-item-avatar-two-line"
+        color="surfaceVariant"
+        class="mb-2"
+      />
     </template>
 
-    <!-- Error -->
-    <v-alert v-else-if="error" type="error" variant="tonal" :text="error" class="mb-4">
-      <template #append>
-        <v-btn variant="text" size="small" @click="load">Retry</v-btn>
-      </template>
-    </v-alert>
+    <!-- Loaded content -->
+    <template v-else>
+      <!-- Stat cards -->
+      <v-row dense class="mb-6">
+        <v-col cols="12" sm="4">
+          <div class="stat-card">
+            <div class="stat-label">Episodes entered</div>
+            <div class="stat-value">{{ episodesEntered }}</div>
+          </div>
+        </v-col>
+        <v-col cols="12" sm="4">
+          <div class="stat-card">
+            <div class="stat-label">Active candidates</div>
+            <div class="stat-value">{{ activeCandidates }}</div>
+          </div>
+        </v-col>
+        <v-col cols="12" sm="4">
+          <div class="stat-card">
+            <div class="stat-label">Top suspect</div>
+            <div class="stat-value stat-value--name">{{ topSuspect }}</div>
+          </div>
+        </v-col>
+      </v-row>
 
-    <!-- Empty state (no active season yet) -->
-    <div v-else-if="scores.length === 0" class="empty-state">
-      <v-icon icon="mdi-eye-off-outline" size="48" color="onSurface" class="mb-3" />
-      <p class="text-body-1 text-onSurface">No scores yet.</p>
-      <p class="text-body-2 mt-1" style="color: #c8c4be">
-        Start filling in episode entries to see your mole ranking.
-      </p>
-    </div>
+      <!-- Empty state -->
+      <div v-if="moleStore.scores.length === 0" class="empty-state">
+        <v-icon icon="mdi-eye-off-outline" size="48" color="onSurface" class="mb-3" />
+        <p class="text-body-1 text-onSurface mb-2">No data yet. Start by entering episode data.</p>
+        <v-btn :to="{ path: '/episodes' }" color="primary" variant="tonal" size="small">
+          Go to Episodes
+        </v-btn>
+      </div>
 
-    <!-- Score ranking -->
-    <ScoreRanking v-else :scores="scores" @select-candidate="navigateToCandidate" />
+      <!-- Ranking list -->
+      <div v-else>
+        <CandidateCard
+          v-for="(candidate, index) in moleStore.scores"
+          :key="candidate.candidateId"
+          :candidate="candidate"
+          :rank="index + 1"
+          :max-score="maxScore"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
 <script lang="ts" setup>
-import type { MoleScore } from '@/api/scores'
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { scoresApi } from '@/api/scores'
-import ScoreRanking from '@/components/ScoreRanking.vue'
+import { computed, onMounted } from 'vue'
+import CandidateCard from '@/components/CandidateCard.vue'
+import { useMoleStore } from '@/stores/moleStore'
 
-const router = useRouter()
+const moleStore = useMoleStore()
 
-const scores = ref<MoleScore[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
+const episodesEntered = computed(() => moleStore.scores[0]?.scorePerEpisode.length ?? 0)
 
-async function load() {
-  loading.value = true
-  error.value = null
-  try {
-    const { data } = await scoresApi.getActive()
-    scores.value = data
-  } catch (error_: unknown) {
-    error.value = error_ instanceof Error ? error_.message : 'Failed to load scores. Please try again.'
-  } finally {
-    loading.value = false
-  }
-}
+const activeCandidates = computed(
+  () => moleStore.scores.filter((s) => s.status === 'Active').length,
+)
 
-function navigateToCandidate(candidateId: string) {
-  router.push({ name: 'CandidateDetail', params: { id: candidateId } })
-}
+const topSuspect = computed(() => moleStore.scores[0]?.candidateName ?? '—')
 
-onMounted(load)
+const maxScore = computed(() => {
+  if (moleStore.scores.length === 0) return 0
+  return Math.max(...moleStore.scores.map((s) => s.score))
+})
+
+onMounted(() => {
+  moleStore.fetchDashboard()
+})
 </script>
 
 <style scoped>
+.stat-card {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #c8c4be;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #f0ede8;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value--name {
+  font-size: 18px;
+  font-weight: 500;
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

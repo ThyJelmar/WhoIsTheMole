@@ -1,117 +1,170 @@
 <template>
-  <v-card
-    class="candidate-card"
-    :class="{ 'candidate-card--eliminated': candidate.status === 'Eliminated' }"
-    @click="$emit('click', candidate.candidateId)"
+  <div
+    class="candidate-row"
+    :class="{ 'candidate-row--eliminated': candidate.status === 'Eliminated' }"
+    @click="handleClick"
   >
-    <!-- Photo -->
-    <div class="candidate-card__photo">
-      <v-img v-if="candidate.photoUrl" :src="candidate.photoUrl" cover height="120" />
-      <div v-else class="candidate-card__photo-placeholder">
-        <v-icon icon="mdi-account" size="48" color="onSurface" />
-      </div>
+    <!-- Rank -->
+    <div class="rank-col">
+      <span class="rank-number">#{{ rank }}</span>
+    </div>
 
-      <!-- Returned badge overlaid on photo -->
-      <div v-if="candidate.status === 'Returned'" class="candidate-card__returned-badge">
-        <v-icon icon="mdi-undo-variant" size="14" />
-        Returned
+    <!-- Avatar -->
+    <div class="avatar-col">
+      <img
+        v-if="candidate.photoUrl"
+        :src="candidate.photoUrl"
+        class="avatar-img"
+        :alt="candidate.candidateName"
+      />
+      <div v-else class="avatar-circle">{{ initials }}</div>
+    </div>
+
+    <!-- Info -->
+    <div class="info-col">
+      <div class="candidate-name">{{ candidate.candidateName }}</div>
+      <div class="candidate-subtitle">
+        {{ candidate.totalTimesAccused }}× accused &middot; {{ candidate.totalKeyPositions }} key
+        positions
       </div>
     </div>
 
-    <v-card-text class="pa-3">
-      <!-- Name + rank -->
-      <div class="d-flex align-center justify-space-between mb-2">
-        <span class="candidate-name text-body-2 font-weight-medium text-onBackground">
-          {{ candidate.candidateName }}
-        </span>
-        <span class="rank-badge">#{{ rank }}</span>
+    <!-- Score + bar -->
+    <div class="score-col">
+      <div class="score-value" :style="{ color: scoreColor }">
+        {{ candidate.score.toFixed(1) }}
       </div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" :style="{ width: barWidth + '%', background: scoreColor }" />
+      </div>
+    </div>
 
-      <!-- Status + score -->
-      <div class="d-flex align-center justify-space-between">
-        <StatusBadge :status="candidate.status" />
-        <span class="score-value" :style="{ color: scoreColor }">
-          {{ candidate.score.toFixed(1) }}
-        </span>
-      </div>
-    </v-card-text>
-  </v-card>
+    <!-- Status -->
+    <div class="status-col">
+      <StatusBadge :status="candidate.status" />
+      <span v-if="candidate.status === 'Returned'" class="return-icon">↩</span>
+    </div>
+  </div>
 </template>
 
 <script lang="ts" setup>
 import type { MoleScore } from '@/api/scores'
 import { computed } from 'vue'
-import { useScoreColor } from '@/composables/useMoleScore'
+import { useRouter } from 'vue-router'
+import { absoluteScoreColor } from '@/composables/useMoleScore'
 import StatusBadge from './StatusBadge.vue'
 
 const props = defineProps<{
   candidate: MoleScore
   rank: number
-  minScore: number
   maxScore: number
 }>()
 
-defineEmits<{
-  click: [candidateId: string]
-}>()
+const router = useRouter()
 
-const { scoreColor: getScoreColor } = useScoreColor()
+const scoreColor = computed(() => absoluteScoreColor(props.candidate.score))
 
-const scoreColor = computed(() =>
-  getScoreColor(props.candidate.score, props.minScore, props.maxScore),
-)
+const initials = computed(() => {
+  const parts = props.candidate.candidateName.trim().split(' ')
+  return parts.length >= 2
+    ? (parts[0][0] + parts.at(-1)![0]).toUpperCase()
+    : props.candidate.candidateName.slice(0, 2).toUpperCase()
+})
+
+const barWidth = computed(() => {
+  if (props.maxScore <= 0) return 0
+  const pct = (props.candidate.score / props.maxScore) * 100
+  return Math.max(0, Math.min(100, pct))
+})
+
+function handleClick() {
+  router.push({ name: 'CandidateDetail', params: { id: props.candidate.candidateId } })
+}
 </script>
 
 <style scoped>
-.candidate-card {
+.candidate-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
   cursor: pointer;
   transition:
     border-color 0.15s,
     opacity 0.15s;
-  height: 100%;
+  margin-bottom: 6px;
 }
 
-.candidate-card:hover {
+.candidate-row:hover {
   border-color: #3d3d3d;
 }
 
-.candidate-card--eliminated {
-  opacity: 0.55;
+.candidate-row--eliminated {
+  opacity: 0.5;
 }
 
-.candidate-card__photo {
-  position: relative;
+.rank-col {
+  width: 32px;
+  flex-shrink: 0;
 }
 
-.candidate-card__photo-placeholder {
-  height: 120px;
-  background: #242424;
+.rank-number {
+  font-size: 13px;
+  color: #c8c4be;
+  font-variant-numeric: tabular-nums;
+}
+
+.avatar-col {
+  flex-shrink: 0;
+}
+
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #2e2e2e;
+  color: #c8c4be;
+  font-size: 14px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.candidate-card__returned-badge {
-  position: absolute;
-  bottom: 6px;
-  left: 6px;
-  background: rgba(26, 46, 61, 0.92);
-  color: #378add;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
+.avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.rank-badge {
+.info-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.candidate-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #f0ede8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.candidate-subtitle {
   font-size: 12px;
   color: #c8c4be;
-  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.score-col {
   flex-shrink: 0;
+  width: 80px;
+  text-align: right;
 }
 
 .score-value {
@@ -120,9 +173,29 @@ const scoreColor = computed(() =>
   font-variant-numeric: tabular-nums;
 }
 
-.candidate-name {
-  white-space: nowrap;
+.score-bar-track {
+  margin-top: 4px;
+  height: 4px;
+  background: #2e2e2e;
+  border-radius: 2px;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.status-col {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.return-icon {
+  font-size: 14px;
+  color: #378add;
 }
 </style>

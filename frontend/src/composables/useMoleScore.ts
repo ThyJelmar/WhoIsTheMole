@@ -3,6 +3,14 @@ import { computed, type MaybeRefOrGetter, toValue } from 'vue'
 
 export type ScoreLevel = 'high' | 'neutral' | 'low'
 
+export function absoluteScoreColor(score: number): string {
+  if (score > 100) return '#E84040'
+  if (score >= 50) return '#CC1F1F'
+  if (score >= 10) return '#EF9F27'
+  if (score >= -10) return '#C8C4BE'
+  return '#378ADD'
+}
+
 // Score color thresholds — bottom third = innocent (blue), top third = suspicious (red)
 const HIGH_THRESHOLD = 0.66
 const LOW_THRESHOLD = 0.33
