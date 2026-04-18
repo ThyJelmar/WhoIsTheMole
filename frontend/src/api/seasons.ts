@@ -5,6 +5,8 @@ export interface Season {
   name: string
   year: number
   isActive: boolean
+  candidateCount?: number
+  episodeCount?: number
 }
 
 export interface ScoreWeights {

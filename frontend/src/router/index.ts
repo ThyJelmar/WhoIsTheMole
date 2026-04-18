@@ -49,6 +49,24 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
+    path: '/admin/seasons/new',
+    name: 'AdminSeasonCreate',
+    component: () => import('@/views/admin/SeasonFormView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/admin/seasons/:id/edit',
+    name: 'AdminSeasonEdit',
+    component: () => import('@/views/admin/SeasonFormView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/admin/seasons/:id/candidates',
+    name: 'AdminSeasonCandidates',
+    component: () => import('@/views/admin/CandidateManagementView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: '/admin/candidates',
     name: 'AdminCandidates',
     component: () => import('@/views/admin/CandidateManagementView.vue'),

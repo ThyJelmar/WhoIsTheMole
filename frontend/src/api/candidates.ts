@@ -32,4 +32,10 @@ export const candidatesApi = {
 
   updateParticipation: (id: string, data: CandidateParticipation) =>
     api.put(`/api/candidates/${id}/participation`, data),
+
+  uploadPhoto: (id: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post<{ photoUrl: string }>(`/api/candidates/${id}/photo`, form)
+  },
 }
